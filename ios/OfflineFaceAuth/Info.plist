@@ -8,6 +8,8 @@
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
 	<string>OfflineFaceAuth</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Camera access required for face authentication</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
