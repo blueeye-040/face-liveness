@@ -1,26 +1,16 @@
-/**
- * Sample React Native App - Camera Test
- * Testing camera access (Front & Back)
- */
-
 import React from 'react';
-import { StatusBar, StyleSheet } from 'react-native';
+import { StatusBar } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import AttendanceScreen from './src/screens/AttendanceScreen';
+import AppNavigator from './src/navigation/AppNavigator';
 
-function App() {
-  return (
-    <SafeAreaProvider>
-      <StatusBar barStyle="light-content" />
-      <AttendanceScreen />
-    </SafeAreaProvider>
-  );
+export default function App() {
+    return (
+        <SafeAreaProvider>
+            <NavigationContainer>
+                <StatusBar barStyle="light-content" backgroundColor="#000" />
+                <AppNavigator />
+            </NavigationContainer>
+        </SafeAreaProvider>
+    );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
-
-export default App;

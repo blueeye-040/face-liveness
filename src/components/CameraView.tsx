@@ -8,7 +8,13 @@ import LivenessProgress from './LivenessProgress';
 import { LivenessEngine } from '../ai/LivenessEngine';
 import { FaceRecognitionEngine } from '../ai/FaceRecognitionEngine';
 
-export default function CameraView() {
+interface Props {
+    onComplete?: (imagePath: string, embedding: number[]) => void;
+}
+
+export default function CameraView({ onComplete }: Props = {}) {
+    const onCompleteRef = useRef(onComplete);
+    onCompleteRef.current = onComplete;
     const { width: windowWidth, height: windowHeight } = useWindowDimensions();
     const device = useCameraDevice('front');
     const { hasPermission, requestPermission } = useCameraPermission();
@@ -53,7 +59,8 @@ export default function CameraView() {
             setCapturedPath(photo.filePath);
 
             const embedding = await FaceRecognitionEngine.generateEmbedding(photo.filePath);
-            console.log('[FIRST_10]', embedding.slice(0, 10));
+            console.log('[EMBEDDING_LENGTH]', embedding.length);
+            onCompleteRef.current?.(photo.filePath, embedding);
         } catch (error) {
             console.error('[CAPTURE_ERROR]', error);
         }
