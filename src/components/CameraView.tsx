@@ -1,63 +1,68 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { StyleSheet, View, Text, useWindowDimensions } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Animated, StyleSheet, View, Text, useWindowDimensions } from 'react-native';
 import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
 import { useFaceDetectorOutput } from 'react-native-vision-camera-face-detector';
 import type { Face } from 'react-native-vision-camera-face-detector';
 import FaceBoundingBox from './FaceBoundingBox';
-import type { FaceBounds } from '../types/Detection';
 import LivenessProgress from './LivenessProgress';
-
-import {
-  LivenessEngine,
-  HeadDirection,
-} from '../ai/LivenessEngine';
+import { LivenessEngine, HeadDirection } from '../ai/LivenessEngine';
 
 export default function CameraView() {
     const { width: windowWidth, height: windowHeight } = useWindowDimensions();
     const device = useCameraDevice('front');
     const { hasPermission, requestPermission } = useCameraPermission();
-    const [faces, setFaces] = useState<FaceBounds[]>([]);
+
     const [instruction, setInstruction] = useState('Turn Head Left');
 
-    const [leftCompleted, setLeftCompleted] = useState(false);
+    // Only transform + opacity use Animated.Value — these are native-driver safe in new arch.
+    // width/height stay as plain numbers; face size is stable so re-renders are rare.
+    const boxPos     = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+    const boxOpacity = useRef(new Animated.Value(0)).current;
+    const [boxSize, setBoxSize] = useState({ width: 0, height: 0 });
+    const prevSize   = useRef({ width: 0, height: 0 });
 
-    const [rightCompleted, setRightCompleted] = useState(false);
-
-    const [livenessPassed, setLivenessPassed] = useState(false);
+    const liveness = useRef({ leftDone: false, rightDone: false, passed: false });
 
     useEffect(() => {
-        if (!hasPermission) {
-            requestPermission();
-        }
+        if (!hasPermission) requestPermission();
     }, [hasPermission, requestPermission]);
 
     const onFacesDetected = useCallback((detectedFaces: Face[]) => {
-        
-        setFaces(
-            detectedFaces.map(face => ({
-                x: face.bounds.x,
-                y: face.bounds.y,
-                width: face.bounds.width,
-                height: face.bounds.height,
-            }))
-        );
+        if (detectedFaces.length === 0) {
+            boxOpacity.setValue(0);
+            return;
+        }
 
-        if (detectedFaces.length === 0 || livenessPassed) { return; }
         const face = detectedFaces[0];
-        const direction = LivenessEngine.getHeadDirection(face.yawAngle,);
+        const b = face.bounds;
 
-        if (!leftCompleted && direction === HeadDirection.LEFT) {
-            setLeftCompleted(true);
+        // Position update every frame — bypasses React, goes straight to native
+        boxPos.setValue({ x: b.x, y: b.y });
+        boxOpacity.setValue(1);
+
+        // Size update only when face moves significantly closer/farther (rare)
+        if (
+            Math.abs(b.width  - prevSize.current.width)  > 15 ||
+            Math.abs(b.height - prevSize.current.height) > 15
+        ) {
+            prevSize.current = { width: b.width, height: b.height };
+            setBoxSize({ width: b.width, height: b.height });
+        }
+
+        const { leftDone, rightDone, passed } = liveness.current;
+        if (passed) return;
+
+        const direction = LivenessEngine.getHeadDirection(face.yawAngle);
+
+        if (!leftDone && direction === HeadDirection.LEFT) {
+            liveness.current.leftDone = true;
             setInstruction('Turn Head Right');
-        }
-        if (leftCompleted && !rightCompleted && direction === HeadDirection.RIGHT) {
-            setRightCompleted(true);
+        } else if (leftDone && !rightDone && direction === HeadDirection.RIGHT) {
+            liveness.current.rightDone = true;
+            liveness.current.passed = true;
             setInstruction('Liveness Passed');
-            setLivenessPassed(true);
         }
-
-    }, [leftCompleted, rightCompleted, livenessPassed]);
-    
+    }, []);
 
     const onError = useCallback((error: Error) => {
         console.error('Face detection error:', error);
@@ -70,8 +75,7 @@ export default function CameraView() {
         autoMode: true,
         windowWidth,
         windowHeight,
-        runLandmarks: true,
-        runContours: true,
+        runClassifications: true,
     });
 
     if (!hasPermission) {
@@ -99,17 +103,18 @@ export default function CameraView() {
                 outputs={[cameraOutput]}
             />
             <LivenessProgress instruction={instruction} />
-            {faces.map((face, index) => (
-                <FaceBoundingBox key={index} {...face} />
-            ))}
+            <FaceBoundingBox
+                pos={boxPos}
+                opacity={boxOpacity}
+                width={boxSize.width}
+                height={boxSize.height}
+            />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
+    container: { flex: 1 },
     text: {
         fontSize: 18,
         color: '#333',
