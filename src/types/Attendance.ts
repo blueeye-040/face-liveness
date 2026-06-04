@@ -4,5 +4,7 @@ export interface AttendanceRecord {
     employeeName: string;
     confidence: number;
     timestamp: string;
-    synced: number;
+    latitude: number | null;
+    longitude: number | null;
+    syncStatus: number; // 0 = pending, 1 = synced
 }

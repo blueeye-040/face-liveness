@@ -86,14 +86,6 @@ export default function CameraView({ onComplete }: Props = {}) {
         boxPos.setValue({ x: b.x, y: b.y });
         boxOpacity.setValue(1);
 
-        if (
-            Math.abs(b.width  - prevSize.current.width)  > 15 ||
-            Math.abs(b.height - prevSize.current.height) > 15
-        ) {
-            prevSize.current = { width: b.width, height: b.height };
-            setBoxSize({ width: b.width, height: b.height });
-        }
-
         const result = LivenessEngine.processFace({
             yawAngle:                face.yawAngle,
             pitchAngle:              face.pitchAngle,
@@ -104,10 +96,20 @@ export default function CameraView({ onComplete }: Props = {}) {
 
         liveness.current = result.state;
 
+        // Check liveness BEFORE any setState — if passed, return immediately
+        // so zero re-renders happen while capturePhotoToFile is in-flight
         if (result.state.passed && !recognitionTriggered.current) {
             recognitionTriggered.current = true;
             captureFace();
             return;
+        }
+
+        if (
+            Math.abs(b.width  - prevSize.current.width)  > 15 ||
+            Math.abs(b.height - prevSize.current.height) > 15
+        ) {
+            prevSize.current = { width: b.width, height: b.height };
+            setBoxSize({ width: b.width, height: b.height });
         }
 
         if (result.instruction !== prevInstruction.current) {

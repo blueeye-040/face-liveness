@@ -1,3 +1,5 @@
+import Geolocation from '@react-native-community/geolocation';
+import { Alert, Linking, Platform } from 'react-native';
 import { AttendanceRepository } from '../database/AttendanceRepository';
 import { UserRepository } from '../database/UserRepository';
 import { cosineSimilarity } from '../utils/similarity';
@@ -10,6 +12,21 @@ export interface MatchResult {
     matched: boolean;
     employee?: Employee;
     confidence: number;
+}
+
+interface Coords {
+    latitude: number;
+    longitude: number;
+}
+
+function getCurrentCoords(): Promise<Coords | null> {
+    return new Promise((resolve) => {
+        Geolocation.getCurrentPosition(
+            (pos) => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+            () => resolve(null),
+            { enableHighAccuracy: false, timeout: 5000, maximumAge: 10000 }
+        );
+    });
 }
 
 export class AttendanceService {
@@ -39,8 +56,10 @@ export class AttendanceService {
         return { matched: false, confidence: bestScore };
     }
 
-    static recordAttendance(match: MatchResult): AttendanceRecord | null {
+    static async recordAttendance(match: MatchResult): Promise<AttendanceRecord | null> {
         if (!match.matched || !match.employee) return null;
+
+        const coords = await getCurrentCoords();
 
         const record: AttendanceRecord = {
             id: Date.now().toString(),
@@ -48,10 +67,16 @@ export class AttendanceService {
             employeeName: match.employee.name,
             confidence: match.confidence,
             timestamp: new Date().toISOString(),
-            synced: 0,
+            latitude: coords?.latitude ?? null,
+            longitude: coords?.longitude ?? null,
+            syncStatus: 0,
         };
 
         AttendanceRepository.save(record);
+
+        console.log('[ATTENDANCE]', record.employeeName,
+            coords ? `${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}` : 'no GPS');
+
         return record;
     }
 }

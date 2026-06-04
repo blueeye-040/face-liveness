@@ -24,9 +24,16 @@ export function getDatabase(): NitroSQLiteConnection {
             employee_name TEXT NOT NULL,
             confidence REAL NOT NULL,
             timestamp TEXT NOT NULL,
-            synced INTEGER DEFAULT 0
+            latitude REAL,
+            longitude REAL,
+            syncStatus INTEGER DEFAULT 0
         )
     `);
+
+    // Migration: add columns if upgrading from older schema
+    try { db.execute('ALTER TABLE attendance ADD COLUMN latitude REAL'); } catch {}
+    try { db.execute('ALTER TABLE attendance ADD COLUMN longitude REAL'); } catch {}
+    try { db.execute('ALTER TABLE attendance ADD COLUMN syncStatus INTEGER DEFAULT 0'); } catch {}
 
     return db;
 }
