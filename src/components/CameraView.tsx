@@ -1,19 +1,23 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Animated, StyleSheet, View, Text, useWindowDimensions } from 'react-native';
-import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
+import { Camera, useCameraDevice, useCameraPermission, usePhotoOutput } from 'react-native-vision-camera';
 import { useFaceDetectorOutput } from 'react-native-vision-camera-face-detector';
 import type { Face } from 'react-native-vision-camera-face-detector';
 import FaceBoundingBox from './FaceBoundingBox';
 import LivenessProgress from './LivenessProgress';
 import { LivenessEngine } from '../ai/LivenessEngine';
+import { FaceRecognitionEngine } from '../ai/FaceRecognitionEngine';
 
 export default function CameraView() {
     const { width: windowWidth, height: windowHeight } = useWindowDimensions();
     const device = useCameraDevice('front');
     const { hasPermission, requestPermission } = useCameraPermission();
+    const photoOutput = usePhotoOutput();
+    const recognitionTriggered = useRef(false);
 
     const [instruction, setInstruction]  = useState('Look Straight at Camera');
     const prevInstruction = useRef('Look Straight at Camera');
+    const [capturedPath, setCapturedPath] = useState<string | null>(null);
 
     // Only transform + opacity use Animated.Value — these are native-driver safe in new arch.
     // width/height stay as plain numbers; face size is stable so re-renders are rare.
@@ -21,12 +25,39 @@ export default function CameraView() {
     const boxOpacity = useRef(new Animated.Value(0)).current;
     const [boxSize, setBoxSize] = useState({ width: 0, height: 0 });
     const prevSize   = useRef({ width: 0, height: 0 });
-
+    const lastFaceRef = useRef<Face | null>(null);
     const liveness = useRef(LivenessEngine.initialState());
 
     useEffect(() => {
         if (!hasPermission) requestPermission();
     }, [hasPermission, requestPermission]);
+
+    // Reset everything after 3 seconds so the next person can use the camera
+    useEffect(() => {
+        if (!capturedPath) return;
+        const timer = setTimeout(() => {
+            setCapturedPath(null);
+            recognitionTriggered.current = false;
+            liveness.current = LivenessEngine.initialState();
+            prevInstruction.current = 'Look Straight at Camera';
+            setInstruction('Look Straight at Camera');
+            boxOpacity.setValue(0);
+        }, 3000);
+        return () => clearTimeout(timer);
+    }, [capturedPath]);
+
+    const captureFace = useCallback(async () => {
+        try {
+            const photo = await photoOutput.capturePhotoToFile({ flashMode: 'off' }, {});
+            console.log('[FACE_CAPTURED]', photo.filePath);
+            setCapturedPath(photo.filePath);
+
+            const embedding = await FaceRecognitionEngine.generateEmbedding(photo.filePath);
+            console.log('[FIRST_10]', embedding.slice(0, 10));
+        } catch (error) {
+            console.error('[CAPTURE_ERROR]', error);
+        }
+    }, [photoOutput]);
 
     const onFacesDetected = useCallback((detectedFaces: Face[]) => {
         if (detectedFaces.length === 0) {
@@ -35,13 +66,19 @@ export default function CameraView() {
         }
 
         const face = detectedFaces[0];
+        lastFaceRef.current = face;
         const b = face.bounds;
 
-        // Position update every frame — bypasses React, goes straight to native
+        // Once capture is triggered, freeze all state updates to keep camera stable
+        if (recognitionTriggered.current) {
+            boxPos.setValue({ x: b.x, y: b.y });
+            boxOpacity.setValue(1);
+            return;
+        }
+
         boxPos.setValue({ x: b.x, y: b.y });
         boxOpacity.setValue(1);
 
-        // Size update only when face moves significantly closer/farther (rare)
         if (
             Math.abs(b.width  - prevSize.current.width)  > 15 ||
             Math.abs(b.height - prevSize.current.height) > 15
@@ -60,10 +97,17 @@ export default function CameraView() {
 
         liveness.current = result.state;
 
+        if (result.state.passed && !recognitionTriggered.current) {
+            recognitionTriggered.current = true;
+            captureFace();
+            return;
+        }
+
         if (result.instruction !== prevInstruction.current) {
             prevInstruction.current = result.instruction;
             setInstruction(result.instruction);
         }
+
     }, []);
 
     const onError = useCallback((error: Error) => {
@@ -79,6 +123,15 @@ export default function CameraView() {
         windowHeight,
         runClassifications: true,
     });
+
+    if (capturedPath) {
+        return (
+            <View style={styles.success}>
+                <Text style={styles.successTitle}>Liveness Passed ✓</Text>
+                <Text style={styles.successPath}>{capturedPath}</Text>
+            </View>
+        );
+    }
 
     if (!hasPermission) {
         return (
@@ -102,7 +155,7 @@ export default function CameraView() {
                 style={StyleSheet.absoluteFill}
                 device={device}
                 isActive={true}
-                outputs={[cameraOutput]}
+                outputs={[cameraOutput, photoOutput]}
             />
             <LivenessProgress instruction={instruction} />
             <FaceBoundingBox
@@ -117,10 +170,8 @@ export default function CameraView() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    text: {
-        fontSize: 18,
-        color: '#333',
-        textAlign: 'center',
-        margin: 20,
-    },
+    text: { fontSize: 18, color: '#333', textAlign: 'center', margin: 20 },
+    success: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' },
+    successTitle: { fontSize: 28, fontWeight: 'bold', color: '#00FF00', marginBottom: 20 },
+    successPath: { fontSize: 11, color: '#aaa', textAlign: 'center', paddingHorizontal: 20 },
 });
