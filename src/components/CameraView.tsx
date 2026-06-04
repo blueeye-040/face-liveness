@@ -5,14 +5,15 @@ import { useFaceDetectorOutput } from 'react-native-vision-camera-face-detector'
 import type { Face } from 'react-native-vision-camera-face-detector';
 import FaceBoundingBox from './FaceBoundingBox';
 import LivenessProgress from './LivenessProgress';
-import { LivenessEngine, HeadDirection } from '../ai/LivenessEngine';
+import { LivenessEngine } from '../ai/LivenessEngine';
 
 export default function CameraView() {
     const { width: windowWidth, height: windowHeight } = useWindowDimensions();
     const device = useCameraDevice('front');
     const { hasPermission, requestPermission } = useCameraPermission();
 
-    const [instruction, setInstruction] = useState('Turn Head Left');
+    const [instruction, setInstruction]  = useState('Look Straight at Camera');
+    const prevInstruction = useRef('Look Straight at Camera');
 
     // Only transform + opacity use Animated.Value — these are native-driver safe in new arch.
     // width/height stay as plain numbers; face size is stable so re-renders are rare.
@@ -21,7 +22,7 @@ export default function CameraView() {
     const [boxSize, setBoxSize] = useState({ width: 0, height: 0 });
     const prevSize   = useRef({ width: 0, height: 0 });
 
-    const liveness = useRef({ leftDone: false, rightDone: false, passed: false });
+    const liveness = useRef(LivenessEngine.initialState());
 
     useEffect(() => {
         if (!hasPermission) requestPermission();
@@ -49,18 +50,19 @@ export default function CameraView() {
             setBoxSize({ width: b.width, height: b.height });
         }
 
-        const { leftDone, rightDone, passed } = liveness.current;
-        if (passed) return;
+        const result = LivenessEngine.processFace({
+            yawAngle:                face.yawAngle,
+            pitchAngle:              face.pitchAngle,
+            leftEyeOpenProbability:  face.leftEyeOpenProbability,
+            rightEyeOpenProbability: face.rightEyeOpenProbability,
+            smilingProbability:      face.smilingProbability,
+        }, liveness.current);
 
-        const direction = LivenessEngine.getHeadDirection(face.yawAngle);
+        liveness.current = result.state;
 
-        if (!leftDone && direction === HeadDirection.LEFT) {
-            liveness.current.leftDone = true;
-            setInstruction('Turn Head Right');
-        } else if (leftDone && !rightDone && direction === HeadDirection.RIGHT) {
-            liveness.current.rightDone = true;
-            liveness.current.passed = true;
-            setInstruction('Liveness Passed');
+        if (result.instruction !== prevInstruction.current) {
+            prevInstruction.current = result.instruction;
+            setInstruction(result.instruction);
         }
     }, []);
 
