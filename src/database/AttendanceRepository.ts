@@ -63,6 +63,10 @@ export class AttendanceRepository {
         );
     }
 
+    static deleteSynced(id: string): void {
+        getDatabase().execute('DELETE FROM attendance WHERE id = ? and syncStatus = 1', [id]);
+    }
+
     static deleteAll(): void {
         getDatabase().execute('DELETE FROM attendance');
     }

@@ -1,7 +1,7 @@
 import Geolocation from '@react-native-community/geolocation';
-import { Alert, Linking, Platform } from 'react-native';
 import { AttendanceRepository } from '../database/AttendanceRepository';
 import { UserRepository } from '../database/UserRepository';
+import { SyncService } from './SyncService';
 import { cosineSimilarity } from '../utils/similarity';
 import type { Employee } from '../types/Employee';
 import type { AttendanceRecord } from '../types/Attendance';
@@ -76,6 +76,9 @@ export class AttendanceService {
 
         console.log('[ATTENDANCE]', record.employeeName,
             coords ? `${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}` : 'no GPS');
+
+        // Fire-and-forget: try to sync immediately, falls back to next reconnect if offline
+        SyncService.syncWithRetry().catch(() => {});
 
         return record;
     }
