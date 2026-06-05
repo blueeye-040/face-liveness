@@ -4,6 +4,12 @@ A fully offline, AI-powered attendance system built in React Native. Face detect
 
 # Presentation PPTX: [Open PPTX](docs/OfflineFaceAuth_Hackathon7.pptx)
 
+## Download & Test
+
+| Platform | Link |
+|----------|------|
+| Android APK | [Download APK](https://drive.google.com/drive/folders/1rEg36FI_fud7nc3WkxLhjW5AtCVPXPqe?usp=sharing) |
+| iOS TestFlight | [In Progress]() |
 ---
 
 ## Quick Start
@@ -86,15 +92,6 @@ cd android
 2. Select **Any iOS Device** as the build target
 3. **Product → Archive**
 4. **Distribute App → Ad Hoc** (for testing) or **App Store**
-
----
-
-## Download & Test
-
-| Platform | Link |
-|----------|------|
-| Android APK | [Download APK](https://drive.google.com/drive/folders/1rEg36FI_fud7nc3WkxLhjW5AtCVPXPqe?usp=sharing) |
-| iOS TestFlight | [In Progress]() |
 
 ---
 
