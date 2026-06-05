@@ -2,6 +2,8 @@
 
 A fully offline, AI-powered attendance system built in React Native. Face detection, 5-step liveness check, MobileFaceNet embeddings, SQLite storage, and automatic AWS sync when internet restores.
 
+# Presentation PPTX: [Open PPTX](docs/OfflineFaceAuth_Hackathon7.pptx)
+
 ---
 
 ## Quick Start
@@ -91,7 +93,7 @@ cd android
 
 | Platform | Link |
 |----------|------|
-| Android APK | [Download APK]([https://github.com/YOUR_USERNAME/OfflineFaceAuth/releases/latest](https://drive.google.com/drive/folders/1rEg36FI_fud7nc3WkxLhjW5AtCVPXPqe?usp=sharing)) |
+| Android APK | [Download APK]([https://drive.google.com/drive/folders/1rEg36FI_fud7nc3WkxLhjW5AtCVPXPqe?usp=sharing]) |
 | iOS TestFlight | [Join TestFlight](https://testflight.apple.com/join/YOUR_CODE) |
 
 > Replace these links after uploading your release build to GitHub Releases or TestFlight.
