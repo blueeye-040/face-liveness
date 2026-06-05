@@ -63,9 +63,8 @@ export class SyncService {
 
                 if (response.ok) {
                     AttendanceRepository.markSynced(record.id);
-                    AttendanceRepository.deleteSynced(record.id);
                     syncedCount++;
-                    console.log(`[SYNC] Synced and purged record ${record.id}`);
+                    console.log(`[SYNC] Synced record ${record.id}`);
                 } else {
                     console.warn(`[SYNC] Server rejected record ${record.id}: ${response.status}`);
                 }

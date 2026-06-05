@@ -56,13 +56,21 @@ export default function CameraView({ onComplete }: Props = {}) {
         try {
             const photo = await photoOutput.capturePhotoToFile({ flashMode: 'off' }, {});
             console.log('[FACE_CAPTURED]', photo.filePath);
-            setCapturedPath(photo.filePath);
+            setInstruction('Processing...');
 
             const embedding = await FaceRecognitionEngine.generateEmbedding(photo.filePath);
             console.log('[EMBEDDING_LENGTH]', embedding.length);
+
+            // Only show success AFTER embedding succeeds — then call onComplete
+            setCapturedPath(photo.filePath);
             onCompleteRef.current?.(photo.filePath, embedding);
         } catch (error) {
             console.error('[CAPTURE_ERROR]', error);
+            // Reset so user can try again — don't leave them stuck on a frozen camera
+            recognitionTriggered.current = false;
+            liveness.current = LivenessEngine.initialState();
+            prevInstruction.current = 'Scan failed. Try again.';
+            setInstruction('Scan failed. Try again.');
         }
     }, [photoOutput]);
 

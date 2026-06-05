@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { StatusBar } from 'react-native';
+import { StatusBar, Platform } from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
 import NetInfo from '@react-native-community/netinfo';
 import { NavigationContainer } from '@react-navigation/native';
@@ -7,10 +7,17 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AppNavigator from './src/navigation/AppNavigator';
 import { PermissionService } from './src/services/PermissionService';
 import { SyncService } from './src/services/SyncService';
+import { FaceRecognitionEngine } from './src/ai/FaceRecognitionEngine';
 
 export default function App() {
     useEffect(() => {
-        Geolocation.setRNConfiguration({ skipPermissionRequests: true, authorizationLevel: 'whenInUse' });
+        // Load TFLite model at startup — catches failures early instead of silently during attendance
+        FaceRecognitionEngine.initialize().catch(e => console.error('[MODEL_INIT_FAILED]', e));
+
+        Geolocation.setRNConfiguration({
+            skipPermissionRequests: Platform.OS === 'android', // Android handles it via PermissionsAndroid; iOS requests natively
+            authorizationLevel: 'whenInUse',
+        });
         PermissionService.requestAll();
 
         // Sync on launch if already online

@@ -29,6 +29,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       launchOptions: launchOptions
     )
 
+    // Keep screen on while app is active (same as FLAG_KEEP_SCREEN_ON on Android)
+    UIApplication.shared.isIdleTimerDisabled = true
+
     return true
   }
 }

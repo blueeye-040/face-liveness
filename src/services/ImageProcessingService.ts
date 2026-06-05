@@ -9,9 +9,12 @@ export class ImageProcessingService {
         imagePath: string,
     ): Promise<Float32Array> {
 
+        // Strip file:// prefix — ImageResizer needs a bare file path
+        const cleanPath = imagePath.replace(/^file:\/\//, '');
+
         const resized =
             await ImageResizer.createResizedImage(
-                imagePath,
+                cleanPath,
                 112,
                 112,
                 'JPEG',
