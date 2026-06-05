@@ -94,9 +94,7 @@ cd android
 | Platform | Link |
 |----------|------|
 | Android APK | [Download APK](https://drive.google.com/drive/folders/1rEg36FI_fud7nc3WkxLhjW5AtCVPXPqe?usp=sharing) |
-| iOS TestFlight | [Join TestFlight](https://testflight.apple.com/join/YOUR_CODE) |
-
-> Replace these links after uploading your release build to GitHub Releases or TestFlight.
+| iOS TestFlight | [In Progress]() |
 
 ---
 
